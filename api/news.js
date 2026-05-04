@@ -23,7 +23,7 @@ export default async function handler(req, res) {
       },
       body: JSON.stringify({
         model: 'claude-sonnet-4-20250514',
-        max_tokens: 1000,
+        max_tokens: 4000,
         tools: [{ type: 'web_search_20250305', name: 'web_search' }],
         system: `あなたはAI・セキュリティニュースのキュレーターです。Web検索で最新ニュースを収集し、重要度順Top10をランキングしてください。必ずJSONのみで返答。コードブロックや説明文は不要。{"date":"日付","news":[{"rank":1,"title":"タイトル（日本語）","source":"媒体名","summary":"要約（日本語40字）","importance":"critical|high|medium","reason":"重要理由（15字以内）","url":"URL","category":"AI|Security|Both"}]}`,
         messages: [{ role: 'user', content: `${today}の最新AIニュースとセキュリティトレンドTop10をランキングしてください。` }]
