@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="AI Radar">
+<meta name="theme-color" content="#0a0a0f">
+<title>AI News Radar</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Syne:wght@600;800&family=Noto+Sans+JP:wght@300;400;700&display=swap');
+
+  :root {
+    --bg: #0a0a0f;
+    --surface: #13131c;
+    --card: #1a1a27;
+    --border: #252535;
+    --accent: #00e87a;
+    --accent-dim: rgba(0,232,122,0.12);
+    --accent2: #7c6fff;
+    --text: #eeeef5;
+    --muted: #6a6a85;
+    --danger: #ff4d6d;
+    --gold: #f5c842;
+    --safe-top: env(safe-area-inset-top, 44px);
+    --safe-bottom: env(safe-area-inset-bottom, 34px);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; background: var(--bg); color: var(--text); font-family: 'Noto Sans JP', sans-serif; overflow: hidden; }
+
+  .app { display: flex; flex-direction: column; height: 100dvh; height: 100vh; }
+
+  .header {
+    padding: calc(var(--safe-top) + 12px) 20px 14px;
+    background: rgba(10,10,15,0.95);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+    flex-shrink: 0; position: relative; z-index: 10;
+  }
+
+  .header-left { display: flex; align-items: center; gap: 10px; }
+
+  .logo {
+    width: 36px; height: 36px;
+    background: var(--accent);
+    clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px;
+    animation: logoPulse 3s ease-in-out infinite;
+    flex-shrink: 0;
+  }
+  @keyframes logoPulse {
+    0%,100% { filter: drop-shadow(0 0 6px var(--accent)); }
+    50% { filter: drop-shadow(0 0 16px var(--accent)); }
+  }
+
+  .header-title { font-family: 'Syne', sans-serif; font-size: 18px; font-weight: 800; }
+  .header-title span { color: var(--accent); }
+  .header-sub { font-size: 10px; color: var(--muted); letter-spacing: 1px; margin-top: 1px; }
+
+  .refresh-btn {
+    width: 38px; height: 38px;
+    background: var(--accent-dim);
+    border: 1px solid rgba(0,232,122,0.25);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px; cursor: pointer; transition: all 0.2s; flex-shrink: 0;
+  }
+  .refresh-btn:active { transform: scale(0.9); }
+  .refresh-btn.spinning { animation: spin 0.8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .content {
+    flex: 1; overflow-y: auto; overflow-x: hidden;
+    -webkit-overflow-scrolling: touch; overscroll-behavior: contain;
+    padding-bottom: calc(var(--safe-bottom) + 80px);
+  }
+
+  .status-strip {
+    display: flex; align-items: center; gap: 8px;
+    padding: 10px 16px;
+    background: var(--surface); border-bottom: 1px solid var(--border);
+    font-size: 12px; color: var(--muted);
+  }
+  .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--muted); flex-shrink: 0; }
+  .dot.live { background: var(--accent); box-shadow: 0 0 6px var(--accent); animation: blink 1.5s ease-in-out infinite; }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+  .welcome { padding: 60px 24px; text-align: center; }
+  .welcome-icon { font-size: 56px; margin-bottom: 20px; }
+  .welcome h2 { font-family: 'Syne', sans-serif; font-size: 22px; font-weight: 800; margin-bottom: 10px; }
+  .welcome h2 span { color: var(--accent); }
+  .welcome p { font-size: 14px; color: var(--muted); line-height: 1.7; margin-bottom: 32px; }
+
+  .fetch-btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: var(--accent); color: #000;
+    font-family: 'Syne', sans-serif; font-weight: 800; font-size: 15px;
+    padding: 16px 32px; border-radius: 50px; border: none; cursor: pointer;
+    box-shadow: 0 8px 32px rgba(0,232,122,0.35); transition: all 0.2s;
+  }
+  .fetch-btn:active { transform: scale(0.96); }
+  .fetch-btn:disabled { opacity: 0.5; }
+
+  .loading-state { padding: 48px 24px; text-align: center; }
+  .loader { width: 52px; height: 52px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.9s linear infinite; margin: 0 auto 20px; }
+  .loading-state h3 { font-family: 'Syne', sans-serif; font-size: 16px; margin-bottom: 6px; }
+  .loading-state p { font-size: 13px; color: var(--muted); }
+
+  .steps { display: flex; flex-direction: column; gap: 8px; margin-top: 24px; text-align: left; max-width: 260px; margin-left: auto; margin-right: auto; }
+  .step-item { display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--muted); padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border); transition: all 0.3s; }
+  .step-item.active { color: var(--accent2); border-color: var(--accent2); background: rgba(124,111,255,0.08); }
+  .step-item.done { color: var(--accent); border-color: var(--accent); background: var(--accent-dim); }
+  .step-check { font-size: 14px; width: 20px; text-align: center; flex-shrink: 0; }
+
+  .date-header { padding: 16px 16px 8px; font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); font-family: 'Syne', sans-serif; }
+
+  .news-card { margin: 0 12px 10px; background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 16px; animation: cardIn 0.35s ease both; cursor: pointer; transition: transform 0.15s; }
+  .news-card:active { transform: scale(0.98); }
+  @keyframes cardIn { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
+
+  .card-top { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 10px; }
+  .rank-badge { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-family: 'Syne', sans-serif; font-size: 14px; font-weight: 800; flex-shrink: 0; }
+  .rank-1 { background: rgba(0,232,122,0.15); color: var(--accent); border: 1px solid rgba(0,232,122,0.3); }
+  .rank-2 { background: rgba(124,111,255,0.15); color: var(--accent2); border: 1px solid rgba(124,111,255,0.3); }
+  .rank-3 { background: rgba(245,200,66,0.12); color: var(--gold); border: 1px solid rgba(245,200,66,0.3); }
+  .rank-other { background: var(--surface); color: var(--muted); border: 1px solid var(--border); }
+
+  .card-meta { flex: 1; min-width: 0; }
+  .card-source { font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--accent2); margin-bottom: 4px; }
+  .card-title { font-size: 15px; font-weight: 700; line-height: 1.4; color: var(--text); }
+
+  .card-bottom { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .card-summary { font-size: 12px; color: var(--muted); line-height: 1.5; flex: 1; }
+  .imp-chip { font-family: 'Syne', sans-serif; font-size: 10px; font-weight: 700; padding: 3px 8px; border-radius: 20px; white-space: nowrap; flex-shrink: 0; }
+  .imp-critical { background: rgba(255,77,109,0.12); color: var(--danger); border: 1px solid rgba(255,77,109,0.25); }
+  .imp-high { background: var(--accent-dim); color: var(--accent); border: 1px solid rgba(0,232,122,0.2); }
+  .imp-medium { background: rgba(124,111,255,0.1); color: var(--accent2); border: 1px solid rgba(124,111,255,0.2); }
+
+  .card-detail { display: none; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); font-size: 13px; color: var(--muted); line-height: 1.7; }
+  .card-detail.open { display: block; }
+  .card-link { display: inline-flex; align-items: center; gap: 4px; color: var(--accent2); font-size: 12px; text-decoration: none; margin-top: 8px; }
+
+  .bottom-bar { position: fixed; bottom: 0; left: 0; right: 0; padding: 12px 16px calc(var(--safe-bottom) + 12px); background: rgba(10,10,15,0.97); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border-top: 1px solid var(--border); display: flex; gap: 10px; z-index: 10; }
+  .bottom-btn { flex: 1; padding: 13px; border-radius: 12px; border: none; font-family: 'Syne', sans-serif; font-weight: 700; font-size: 13px; cursor: pointer; transition: all 0.2s; }
+  .bottom-btn:active { transform: scale(0.97); }
+  .bottom-btn-primary { background: var(--accent); color: #000; }
+  .bottom-btn-secondary { background: var(--surface); color: var(--accent); border: 1px solid rgba(0,232,122,0.25); }
+
+  .sheet-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 100; backdrop-filter: blur(4px); }
+  .sheet-overlay.open { display: block; }
+  .sheet { position: fixed; bottom: 0; left: 0; right: 0; background: var(--surface); border-radius: 24px 24px 0 0; border-top: 1px solid var(--border); padding: 0 0 calc(var(--safe-bottom) + 16px); max-height: 85vh; display: flex; flex-direction: column; transform: translateY(100%); transition: transform 0.35s cubic-bezier(0.32,0.72,0,1); z-index: 101; }
+  .sheet.open { transform: translateY(0); }
+  .sheet-handle { width: 36px; height: 4px; background: var(--border); border-radius: 2px; margin: 12px auto 0; flex-shrink: 0; }
+  .sheet-header { padding: 16px 20px 12px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+  .sheet-title { font-family: 'Syne', sans-serif; font-size: 16px; font-weight: 800; }
+  .sheet-close { width: 28px; height: 28px; background: var(--card); border: none; border-radius: 50%; color: var(--muted); font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+  .sheet-body { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 16px 20px; }
+
+  .field-label { font-size: 12px; color: var(--muted); margin-bottom: 8px; letter-spacing: 1px; text-transform: uppercase; }
+  .webhook-input { width: 100%; background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; color: var(--text); font-family: 'Noto Sans JP', sans-serif; font-size: 13px; outline: none; margin-bottom: 16px; transition: border-color 0.2s; }
+  .webhook-input:focus { border-color: var(--accent); }
+  .webhook-input::placeholder { color: var(--muted); }
+
+  .slack-preview-box { background: #1a1d21; border: 1px solid #2d3139; border-radius: 12px; padding: 14px; font-family: monospace; font-size: 11px; color: #d1d2d3; white-space: pre-wrap; line-height: 1.7; max-height: 180px; overflow-y: auto; margin-bottom: 16px; }
+
+  .action-btn { width: 100%; border: none; border-radius: 12px; padding: 15px; font-family: 'Syne', sans-serif; font-weight: 700; font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: all 0.2s; margin-bottom: 10px; }
+  .action-btn:active { transform: scale(0.98); }
+  .action-btn:disabled { opacity: 0.5; }
+  .btn-slack { background: #4a154b; color: #fff; }
+  .btn-copy { background: var(--card); color: var(--accent); border: 1px solid rgba(0,232,122,0.25); }
+
+  .hint-box { margin: 12px; background: var(--accent-dim); border: 1px solid rgba(0,232,122,0.2); border-radius: 12px; padding: 12px 16px; font-size: 12px; color: var(--accent); line-height: 1.6; display: flex; gap: 10px; align-items: flex-start; }
+
+  .error-box { margin: 12px; background: rgba(255,77,109,0.08); border: 1px solid rgba(255,77,109,0.25); border-radius: 12px; padding: 14px 16px; font-size: 13px; color: var(--danger); line-height: 1.6; }
+
+  .toast { position: fixed; bottom: calc(var(--safe-bottom) + 90px); left: 50%; transform: translateX(-50%) translateY(20px); background: var(--accent); color: #000; padding: 10px 20px; border-radius: 50px; font-family: 'Syne', sans-serif; font-weight: 700; font-size: 13px; opacity: 0; transition: all 0.3s; z-index: 200; white-space: nowrap; }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="header">
+    <div class="header-left">
+      <div class="logo">⚡</div>
+      <div>
+        <div class="header-title">AI <span>Radar</span></div>
+        <div class="header-sub">AI × SECURITY NEWS</div>
+      </div>
+    </div>
+    <div class="refresh-btn" id="refreshBtn" onclick="fetchNews()">↻</div>
+  </div>
+
+  <div class="status-strip">
+    <div class="dot" id="statusDot"></div>
+    <span id="statusText">ボタンを押して最新ニュースを取得</span>
+  </div>
+
+  <div class="content" id="content">
+    <div class="welcome" id="welcomeState">
+      <div class="welcome-icon">📡</div>
+      <h2>AI <span>Radar</span></h2>
+      <p>AI・セキュリティの最新ニュースを<br>Claudeがリアルタイムで収集し<br>重要度順にランキングします</p>
+      <button class="fetch-btn" onclick="fetchNews()">⚡ ニュースを取得する</button>
+    </div>
+
+    <div class="loading-state" id="loadingState" style="display:none;">
+      <div class="loader"></div>
+      <h3>取得中...</h3>
+      <p>Claudeが最新ニュースを分析しています</p>
+      <div class="steps">
+        <div class="step-item" id="s1"><span class="step-check">○</span>Web検索</div>
+        <div class="step-item" id="s2"><span class="step-check">○</span>記事収集</div>
+        <div class="step-item" id="s3"><span class="step-check">○</span>重要度分析</div>
+        <div class="step-item" id="s4"><span class="step-check">○</span>ランキング生成</div>
+      </div>
+    </div>
+
+    <div class="error-box" id="errorBox" style="display:none;"></div>
+    <div class="hint-box" id="installHint" style="display:none;">
+      <span style="font-size:20px;">📲</span>
+      <div>ホーム画面に追加するとアプリとして使えます！<br>Safari → 共有ボタン →「ホーム画面に追加」</div>
+    </div>
+
+    <div id="dateHeader" class="date-header" style="display:none;"></div>
+    <div id="newsList"></div>
+  </div>
+
+  <div class="bottom-bar" id="bottomBar" style="display:none;">
+    <button class="bottom-btn bottom-btn-secondary" onclick="fetchNews()">🔄 再取得</button>
+    <button class="bottom-btn bottom-btn-primary" onclick="openSheet()">📬 Slackへ送信</button>
+  </div>
+</div>
+
+<div class="sheet-overlay" id="overlay" onclick="closeSheet()"></div>
+<div class="sheet" id="slackSheet">
+  <div class="sheet-handle"></div>
+  <div class="sheet-header">
+    <div class="sheet-title">📬 Slackに送信</div>
+    <button class="sheet-close" onclick="closeSheet()">✕</button>
+  </div>
+  <div class="sheet-body">
+    <div class="field-label">Slack Webhook URL（任意）</div>
+    <input class="webhook-input" id="webhookUrl" type="url"
+      placeholder="https://hooks.slack.com/services/..."
+      autocomplete="off" autocorrect="off" spellcheck="false">
+    <div class="field-label">メッセージプレビュー</div>
+    <div class="slack-preview-box" id="slackPreview"></div>
+    <button class="action-btn btn-slack" id="sendBtn" onclick="sendToSlack()">💬 Slackに送信</button>
+    <button class="action-btn btn-copy" onclick="copyMessage()">📋 メッセージをコピー</button>
+    <p style="font-size:11px;color:var(--muted);text-align:center;line-height:1.6;">
+      Webhook URLは <a href="https://api.slack.com/apps" target="_blank" style="color:var(--accent2)">api.slack.com/apps</a> で取得
+    </p>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  let newsData = [];
+  let slackMessage = '';
+
+  if (!window.navigator.standalone) {
+    document.getElementById('installHint').style.display = 'flex';
+  }
+
+  function setStatus(text, live = false) {
+    document.getElementById('statusText').textContent = text;
+    document.getElementById('statusDot').className = 'dot' + (live ? ' live' : '');
+  }
+
+  function setStep(n) {
+    for (let i = 1; i <= 4; i++) {
+      const el = document.getElementById('s' + i);
+      if (!el) continue;
+      const check = el.querySelector('.step-check');
+      if (i < n) { el.className = 'step-item done'; check.textContent = '✓'; }
+      else if (i === n) { el.className = 'step-item active'; check.textContent = '→'; }
+      else { el.className = 'step-item'; check.textContent = '○'; }
+    }
+  }
+
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2500);
+  }
+
+  async function fetchNews() {
+    document.getElementById('refreshBtn').classList.add('spinning');
+    document.getElementById('welcomeState').style.display = 'none';
+    document.getElementById('loadingState').style.display = 'block';
+    document.getElementById('errorBox').style.display = 'none';
+    document.getElementById('newsList').innerHTML = '';
+    document.getElementById('dateHeader').style.display = 'none';
+    document.getElementById('bottomBar').style.display = 'none';
+    setStatus('ニュースを収集中...', true);
+    setStep(1);
+
+    setTimeout(() => setStep(2), 2000);
+    setTimeout(() => setStep(3), 4000);
+
+    try {
+      const res = await fetch('/api/news', { method: 'POST', headers: { 'Content-Type': 'application/json' } });
+      setStep(4);
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || 'サーバーエラー');
+      }
+
+      const parsed = await res.json();
+      newsData = parsed.news || [];
+      if (!newsData.length) throw new Error('ニュースを取得できませんでした');
+
+      document.getElementById('loadingState').style.display = 'none';
+      document.getElementById('dateHeader').style.display = 'block';
+      document.getElementById('dateHeader').textContent = parsed.date || '';
+      document.getElementById('bottomBar').style.display = 'flex';
+
+      buildSlack(newsData, parsed.date);
+      renderNews(newsData);
+      setStatus('Top ' + newsData.length + '件 更新完了', false);
+
+    } catch (err) {
+      document.getElementById('loadingState').style.display = 'none';
+      const eb = document.getElementById('errorBox');
+      eb.innerHTML = '⚠ ' + err.message;
+      eb.style.display = 'block';
+      document.getElementById('welcomeState').style.display = 'block';
+      setStatus('エラーが発生しました', false);
+    } finally {
+      document.getElementById('refreshBtn').classList.remove('spinning');
+    }
+  }
+
+  function renderNews(news) {
+    const list = document.getElementById('newsList');
+    list.innerHTML = '';
+    news.forEach((item, i) => {
+      const card = document.createElement('div');
+      card.className = 'news-card';
+      card.style.animationDelay = (i * 0.05) + 's';
+      const rc = i===0?'rank-1':i===1?'rank-2':i===2?'rank-3':'rank-other';
+      const ic = item.importance==='critical'?'imp-critical':item.importance==='high'?'imp-high':'imp-medium';
+      const il = item.importance==='critical'?'CRITICAL':item.importance==='high'?'HIGH':'MEDIUM';
+      const cat = item.category==='Security'?'🔐':item.category==='Both'?'🤖🔐':'🤖';
+      card.innerHTML = `
+        <div class="card-top">
+          <div class="rank-badge ${rc}">#${item.rank}</div>
+          <div class="card-meta">
+            <div class="card-source">${cat} ${item.source||''}</div>
+            <div class="card-title">${item.title}</div>
+          </div>
+        </div>
+        <div class="card-bottom">
+          <div class="card-summary">${item.reason} — ${item.summary}</div>
+          <div class="imp-chip ${ic}">${il}</div>
+        </div>
+        <div class="card-detail" id="d${i}">
+          ${item.summary}
+          ${item.url?`<br><a class="card-link" href="${item.url}" target="_blank">🔗 記事を読む ↗</a>`:''}
+        </div>`;
+      card.addEventListener('click', () => document.getElementById('d'+i).classList.toggle('open'));
+      list.appendChild(card);
+    });
+  }
+
+  function buildSlack(news, date) {
+    let msg = `*⚡ AI News Radar — ${date||''}*\n`;
+    msg += `_AI・セキュリティ最新ニュース Top ${news.length} | Claude AIスコアリング_\n`;
+    msg += '━━━━━━━━━━━━━━━━━━\n\n';
+    news.forEach(item => {
+      const e = item.importance==='critical'?'🔴':item.importance==='high'?'🟢':'🟣';
+      const c = item.category==='Security'?'🔐':item.category==='Both'?'🤖🔐':'🤖';
+      msg += `${e} *#${item.rank} ${item.title}*\n   ${c} ${item.source||''} | ${item.reason}\n   ${item.summary}\n`;
+      if (item.url) msg += `   🔗 ${item.url}\n`;
+      msg += '\n';
+    });
+    msg += '━━━━━━━━━━━━━━━━━━\n_AI News Radar_';
+    slackMessage = msg;
+    document.getElementById('slackPreview').textContent = msg;
+  }
+
+  function openSheet() { document.getElementById('overlay').classList.add('open'); document.getElementById('slackSheet').classList.add('open'); }
+  function closeSheet() { document.getElementById('overlay').classList.remove('open'); document.getElementById('slackSheet').classList.remove('open'); }
+
+  async function copyMessage() {
+    try { await navigator.clipboard.writeText(slackMessage); } catch(e) {
+      const ta = document.createElement('textarea'); ta.value = slackMessage;
+      document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
+    }
+    showToast('✓ コピーしました！');
+  }
+
+  async function sendToSlack() {
+    const url = document.getElementById('webhookUrl').value.trim();
+    if (!url) { copyMessage(); return; }
+    const btn = document.getElementById('sendBtn');
+    btn.disabled = true; btn.textContent = '送信中...';
+    try {
+      await fetch(url, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({text: slackMessage}), mode:'no-cors' });
+      showToast('✓ 送信しました！'); closeSheet();
+    } catch(e) { showToast('⚠ コピーしてお試しください'); copyMessage(); }
+    finally { btn.disabled = false; btn.innerHTML = '💬 Slackに送信'; }
+  }
+</script>
+</body>
+</html>
